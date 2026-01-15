@@ -1,0 +1,183 @@
+namespace Toolbox.CodeGeneration.ValueObject;
+
+using System;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
+[Generator]
+public sealed class Generator : IIncrementalGenerator
+{
+    public void Initialize(IncrementalGeneratorInitializationContext context)
+    {
+        // 1. Ищем типы с атрибутами
+        var candidates = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (node, _) => IsCandidate(node),
+                transform: static (ctx, _) => GetCandidate(ctx))
+            .Where(static m => m is not null)!;
+
+        // 2. Достаём настройки компиляции
+        var compilationAndModels = context.CompilationProvider.Combine(candidates.Collect());
+
+        // 3. Регистрация генерации
+        context.RegisterSourceOutput(compilationAndModels,
+            static (spc, tuple) => Execute(spc, tuple.Left, tuple.Right));
+    }
+
+    private static bool IsCandidate(SyntaxNode node)
+        => node is TypeDeclarationSyntax { AttributeLists.Count: > 0 }
+            and (StructDeclarationSyntax or ClassDeclarationSyntax or RecordDeclarationSyntax);
+
+    private static TypeDeclarationSyntax? GetCandidate(GeneratorSyntaxContext ctx)
+        => ctx.Node as TypeDeclarationSyntax;
+
+    private static void Execute(
+        SourceProductionContext context,
+        Compilation compilation,
+        ImmutableArray<TypeDeclarationSyntax> typeDeclarations)
+    {
+        if (typeDeclarations.IsDefaultOrEmpty)
+            return;
+
+        var attrSymbol = compilation.GetTypeByMetadataName("Toolbox.CodeGeneration.Attributes.ValueObjectAttribute");
+        if (attrSymbol is null)
+            return;
+
+        foreach (var decl in typeDeclarations.Distinct())
+        {
+            var semanticModel = compilation.GetSemanticModel(decl.SyntaxTree);
+            if (semanticModel.GetDeclaredSymbol(decl) is not INamedTypeSymbol typeSymbol)
+                continue;
+
+            // Проверяем наличие [ValueObject]
+            var valueObjectAttr = typeSymbol
+                .GetAttributes()
+                .FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attrSymbol));
+
+            if (valueObjectAttr is null)
+                continue;
+
+            var model = CreateModel(typeSymbol, valueObjectAttr);
+            if (model is null)
+                continue;
+
+            var source = GenerateValueObjectCode(model);
+            context.AddSource($"{model.TypeName}.ValueObject.g.cs", source);
+        }
+    }
+
+    private static ValueObjectModel? CreateModel(
+        INamedTypeSymbol typeSymbol,
+        AttributeData attr)
+    {
+        // underlyingType из конструктора атрибута
+        if (attr.ConstructorArguments.Length != 1)
+            return null;
+
+        if (attr.ConstructorArguments[0].Value is not INamedTypeSymbol underlying)
+            return null;
+
+        // Можно добавить ограничения: допустим только primitive/struct/record struct
+        // Здесь — упрощённо.
+
+        if (typeSymbol.TypeKind is not TypeKind.Struct)
+            return null;
+
+        var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
+            ? string.Empty
+            : typeSymbol.ContainingNamespace.ToDisplayString();
+
+        var accessibility = typeSymbol.DeclaredAccessibility switch
+        {
+            Accessibility.Public   => "public",
+            Accessibility.Internal => "internal",
+            _                      => "internal"
+        };
+
+        // Чтение “настроек” из именованных аргументов атрибута
+        bool allowImplicitToPrimitive = false;
+        bool implementComparable      = false;
+
+        foreach (var namedArg in attr.NamedArguments)
+        {
+            if (namedArg.Key == "AllowImplicitToPrimitive" &&
+                namedArg.Value.Value is bool b1) allowImplicitToPrimitive = b1;
+
+            if (namedArg.Key == "ImplementComparable" &&
+                namedArg.Value.Value is bool b2) implementComparable = b2;
+        }
+
+        return new ValueObjectModel(
+            nameSpace: ns,
+            typeName: typeSymbol.Name,
+            fullTypeName: typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            accessibility: accessibility,
+            isStruct: true,
+            isRecord: false,
+            underlyingTypeFullName: underlying.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            allowImplicitToPrimitive: allowImplicitToPrimitive,
+            allowValidation: false,
+            implementComparable: true, // implementComparable
+            rawValueIsNullable: false
+        );
+    }
+
+    private static string GenerateValueObjectCode(ValueObjectModel model)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("// <auto-generated />");
+
+        if (!string.IsNullOrWhiteSpace(model.Namespace))
+        {
+            sb.Append("namespace ").Append(model.Namespace).AppendLine(";");
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("using System.Linq;");
+        sb.AppendLine();
+        sb.AppendLine($"#nullable enable");
+        sb.AppendLine();
+        
+        // Сериализатор 
+        sb.AppendLine($"[System.Text.Json.Serialization.JsonConverter(typeof({model.TypeName}.SystemTextJsonConverter))]");
+
+        // Иммутабельность + отсутствие наследования readonly partial struct
+        var typeKeyword = model.IsStruct ? "partial struct" : "partial class";
+        // var recordModifier = model.IsRecord ? "record" : string.Empty;
+
+        // Интерфейсы: IEquatable<T>, опционально IComparable<T>
+        var interfaces = model.ImplementComparable
+            ? $" : IEquatable<{model.TypeName}>, IComparable<{model.TypeName}>"
+            : $" : IEquatable<{model.TypeName}>";
+
+        sb.AppendLine($"{model.Accessibility} readonly {typeKeyword} {model.TypeName}{interfaces}");
+        sb.AppendLine("{");
+
+        sb.AppendRawValue(model);
+        sb.AppendPrivateConstructor(model);
+        sb.AppendFactoryMethod(model);
+
+        if (model.AllowValidation)
+            sb.AppendValidationMethod(model);
+
+        sb.AppendEqualityMethods(model);
+        sb.AppendComparisonExpressions(model);
+        sb.AppendCompareMethods(model);
+        sb.AppendExplicitAndImplicitOperators(model);
+        sb.AppendIsDefault(model);
+        sb.AppendToStringOverriding(model);
+
+        sb.AppendSystemTextJsonWriteMethods(model);
+        sb.AppendSystemTextJsonConverter(model);
+        sb.AppendNewtonsoftJsonConverter(model);
+
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
+}
