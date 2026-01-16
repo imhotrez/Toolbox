@@ -1,8 +1,6 @@
 namespace Toolbox.CodeGeneration.ValueObject;
 
-using System;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -166,9 +164,8 @@ public sealed class Generator : IIncrementalGenerator
         sb.AppendComparisonExpressions(model);
         sb.AppendCompareMethods(model);
         sb.AppendExplicitAndImplicitOperators(model);
+        sb.AppendSpanFormattable(model);
         sb.AppendIsDefault(model);
-        sb.AppendToStringOverriding(model);
-
         sb.AppendSystemTextJsonWriteMethods(model);
         sb.AppendSystemTextJsonConverter(model);
         sb.AppendNewtonsoftJsonConverter(model);

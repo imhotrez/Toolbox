@@ -95,12 +95,4 @@ internal static partial class GeneratorExtension
                       model.UnderlyingTypeFullName + ">.Default.Equals(Value, default);");
         sb.AppendLine();
     }
-
-    internal static void AppendToStringOverriding(this StringBuilder sb, ValueObjectModel model)
-    {
-        sb.AppendLine(model.RawValueIsNullable
-            ? "    public override string ToString() => Value?.ToString() ?? string.Empty;"
-            : "    public override string ToString() => Value.ToString() ?? string.Empty;");
-        sb.AppendLine();
-    }
 }
