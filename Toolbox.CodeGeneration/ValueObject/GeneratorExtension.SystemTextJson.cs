@@ -48,30 +48,6 @@ internal static partial class GeneratorExtension
         sb.AppendLine("    #region System.Text.Json Converter");
         sb.AppendLine($"    private sealed class SystemTextJsonConverter : System.Text.Json.Serialization.JsonConverter<{type}>");
         sb.AppendLine("    {");
-
-        // READ VALUE
-        /*sb.AppendLine($"        public override {type} Read(");
-        sb.AppendLine("            ref System.Text.Json.Utf8JsonReader reader,");
-        sb.AppendLine("            System.Type typeToConvert,");
-        sb.AppendLine("            System.Text.Json.JsonSerializerOptions options)");
-        sb.AppendLine("        {");
-        sb.AppendLine("            if (reader.TokenType == System.Text.Json.JsonTokenType.Null)");
-        sb.AppendLine("                throw new System.Text.Json.JsonException(\"Null is not allowed.\");");
-        sb.AppendLine();
-        sb.AppendLine("            if (reader.TokenType == System.Text.Json.JsonTokenType.String)");
-        sb.AppendLine("            {");
-        sb.AppendLine($"                {raw} rawValue;");
-        sb.AppendLine($"                if (!{raw}.TryParse(reader.GetString(), out rawValue))");
-        sb.AppendLine($"                    throw new System.Text.Json.JsonException(\"Invalid {type} format.\");");
-        sb.AppendLine();
-        sb.AppendLine("                return Create(rawValue);");
-        sb.AppendLine("            }");
-        sb.AppendLine();
-        sb.AppendLine($"            var value = reader.Get{GetSystemTextJsonGetter(raw)}();");
-        sb.AppendLine($"            if (!{type}.TryCreate(value, out var result))");
-        sb.AppendLine($"                throw new System.Text.Json.JsonException(\"Invalid {type} value.\");");
-        sb.AppendLine("            return result;");
-        sb.AppendLine("        }");*/
         
         var allowedToken = GetAllowedJsonTokenType(raw);
 

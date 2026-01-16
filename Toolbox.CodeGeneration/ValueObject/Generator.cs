@@ -142,13 +142,14 @@ public sealed class Generator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine($"#nullable enable");
         sb.AppendLine();
-        
-        // Сериализатор 
-        sb.AppendLine($"[System.Text.Json.Serialization.JsonConverter(typeof({model.TypeName}.SystemTextJsonConverter))]");
+
+        // Сериализаторы
+        sb.AppendLine($"[Newtonsoft.Json.JsonConverter(typeof({model.TypeName}.NewtonsoftJsonConverter))]");
+        sb.AppendLine(
+            $"[System.Text.Json.Serialization.JsonConverter(typeof({model.TypeName}.SystemTextJsonConverter))]");
 
         // Иммутабельность + отсутствие наследования readonly partial struct
         var typeKeyword = model.IsStruct ? "partial struct" : "partial class";
-        // var recordModifier = model.IsRecord ? "record" : string.Empty;
 
         // Интерфейсы: IEquatable<T>, опционально IComparable<T>
         var interfaces = model.ImplementComparable
