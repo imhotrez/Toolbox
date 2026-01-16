@@ -12,8 +12,7 @@ internal static partial class GeneratorExtension
             ? "reader.TokenType != Newtonsoft.Json.JsonToken.String"
             : "reader.TokenType != Newtonsoft.Json.JsonToken.Integer && reader.TokenType != Newtonsoft.Json.JsonToken.Float";
 
-        sb.AppendLine("    internal sealed class NewtonsoftJsonConverter");
-        sb.AppendLine($"        : Newtonsoft.Json.JsonConverter<{typeName}>");
+        sb.AppendLine($"    internal sealed class NewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<{typeName}>");
         sb.AppendLine("    {");
 
         // READ

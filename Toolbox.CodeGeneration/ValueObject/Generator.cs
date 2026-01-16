@@ -139,6 +139,7 @@ public sealed class Generator : IIncrementalGenerator
         }
 
         sb.AppendLine("using System.Linq;");
+        sb.AppendLine("using System.Numerics;");
         sb.AppendLine();
         sb.AppendLine($"#nullable enable");
         sb.AppendLine();
@@ -152,9 +153,8 @@ public sealed class Generator : IIncrementalGenerator
         var typeKeyword = model.IsStruct ? "partial struct" : "partial class";
 
         // Интерфейсы: IEquatable<T>, опционально IComparable<T>
-        var interfaces = model.ImplementComparable
-            ? $" : IEquatable<{model.TypeName}>, IComparable<{model.TypeName}>"
-            : $" : IEquatable<{model.TypeName}>";
+        var interfaces =
+            $" : IEquatable<{model.TypeName}>, IComparable<{model.TypeName}>, IEqualityOperators<{model.TypeName}, {model.TypeName}, bool>";
 
         sb.AppendLine($"{model.Accessibility} readonly {typeKeyword} {model.TypeName}{interfaces}");
         sb.AppendLine("{");
