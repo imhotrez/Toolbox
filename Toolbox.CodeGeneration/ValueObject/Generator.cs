@@ -159,11 +159,7 @@ public sealed class Generator : IIncrementalGenerator
         sb.AppendLine("{");
 
         sb.AppendRawValue(model);
-        sb.AppendPrivateConstructor(model);
-        sb.AppendFactoryMethod(model);
-
-        if (model.AllowValidation)
-            sb.AppendValidationMethod(model);
+        sb.AppendFactoryAndValidation(model);
 
         sb.AppendEqualityMethods(model);
         sb.AppendComparisonExpressions(model);

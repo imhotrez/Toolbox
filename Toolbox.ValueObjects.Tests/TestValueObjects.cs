@@ -1,5 +1,6 @@
 namespace Toolbox.ValueObjects.Tests;
 
+using System.Text.RegularExpressions;
 using CodeGeneration.Attributes;
 
 #region Test ValueObjects declarations
@@ -33,5 +34,33 @@ public readonly partial struct TestDecimalValueObject;
 
 [ValueObject(typeof(string))]
 public readonly partial struct TestStringValueObject;
+
+[ValueObject(typeof(string))]
+public readonly partial struct Email
+{
+    static partial void Validate(string value, ref bool isValid, ref string? error)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            isValid = false;
+            error = null;
+            return;
+        }
+        
+        try
+        {
+            const string pattern = @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
+            isValid = MyRegex().IsMatch(value);
+            error   = null;
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            isValid =  false;
+        }
+    }
+
+    [GeneratedRegex(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")]
+    private static partial Regex MyRegex();
+}
 
 #endregion
