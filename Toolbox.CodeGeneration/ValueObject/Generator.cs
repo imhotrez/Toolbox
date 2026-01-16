@@ -166,6 +166,7 @@ public sealed class Generator : IIncrementalGenerator
         sb.AppendExplicitAndImplicitOperators(model);
         sb.AppendSpanFormattable(model);
         sb.AppendUtf8SpanFormattable(model);
+        sb.AppendSpanParsable(model);
         sb.AppendIsDefault(model);
         sb.AppendSystemTextJsonWriteMethods(model);
         sb.AppendSystemTextJsonConverter(model);
