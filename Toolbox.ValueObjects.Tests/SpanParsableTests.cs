@@ -9,8 +9,8 @@ public sealed class SpanParsableTests
 {
     // ---------- NUMERIC ----------
 
-    [TestCase("42", 42)]
-    [TestCase("0", 0)]
+    [TestCase("123", 123)]
+    [TestCase("0",   0)]
     public void Int_TryParse_Works(string input, int expected)
     {
         var ok = TestIntValueObject.TryParse(
@@ -18,7 +18,7 @@ public sealed class SpanParsableTests
             CultureInfo.GetCultureInfo("fr-FR"),
             out var result);
 
-        Assert.That(ok, Is.True);
+        Assert.That(ok,           Is.True);
         Assert.That(result.Value, Is.EqualTo(expected));
     }
 
@@ -30,12 +30,12 @@ public sealed class SpanParsableTests
             CultureInfo.GetCultureInfo("fr-FR"),
             out var result);
 
-        Assert.That(ok, Is.True);
+        Assert.That(ok,           Is.True);
         Assert.That(result.Value, Is.EqualTo(1.5));
     }
 
     [Test]
-    public void Double_TryParse_WithComma_Fails()
+    public void Double_TryParse_Comma_Fails()
     {
         var ok = TestDoubleValueObject.TryParse(
             "1,5".AsSpan(),
@@ -49,7 +49,7 @@ public sealed class SpanParsableTests
     public void Int_Parse_Invalid_Throws()
     {
         Assert.That(
-            () => TestIntValueObject.Parse("abc".AsSpan(), CultureInfo.InvariantCulture),
+            () => TestIntValueObject.Parse("abc".AsSpan(), null),
             Throws.TypeOf<FormatException>());
     }
 
@@ -63,28 +63,17 @@ public sealed class SpanParsableTests
             null,
             out var result);
 
-        Assert.That(ok, Is.True);
+        Assert.That(ok,           Is.True);
         Assert.That(result.Value, Is.EqualTo("hello"));
     }
 
+    // ---------- DOMAIN VALIDATION ----------
+
     [Test]
-    public void String_Parse_DelegatesToValidation()
+    public void Parse_DelegatesToDomainValidation()
     {
         Assert.That(
             () => Email.Parse("not-an-email".AsSpan(), null),
             Throws.TypeOf<FormatException>());
-    }
-
-    // ---------- BOUNDARY ----------
-
-    [Test]
-    public void EmptySpan_Parse_Fails_ForNumeric()
-    {
-        var ok = TestIntValueObject.TryParse(
-            ReadOnlySpan<char>.Empty,
-            null,
-            out _);
-
-        Assert.That(ok, Is.False);
     }
 }

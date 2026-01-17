@@ -21,12 +21,14 @@ internal static partial class GeneratorExtension
 
         if (raw == "string" || raw == "System.String")
         {
+            // STRING
             sb.AppendLine("        var value = s.ToString();");
             sb.AppendLine();
             sb.AppendLine($"        return {type}.TryCreate(value, out result);");
         }
         else
         {
+            // NUMERIC
             sb.AppendLine($"        if (!{raw}.TryParse(");
             sb.AppendLine("                s,");
             sb.AppendLine($"                {GetNumberStyles(raw)},");

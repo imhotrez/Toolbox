@@ -152,7 +152,15 @@ public sealed class Generator : IIncrementalGenerator
 
         // Интерфейсы: IEquatable<T>, опционально IComparable<T>
         var interfaces =
-            $" : IEquatable<{model.TypeName}>, IComparable<{model.TypeName}>, IEqualityOperators<{model.TypeName}, {model.TypeName}, bool>, ISpanFormattable, IUtf8SpanFormattable";
+            $" : "                                                            +
+            $"IEquatable<{model.TypeName}>, "                                 +
+            $"IComparable<{model.TypeName}>, "                                +
+            $"IEqualityOperators<{model.TypeName}, {model.TypeName}, bool>, " +
+            $"ISpanFormattable, "                                             +
+            $"IUtf8SpanFormattable, "                                         +
+            $"IParsable<{model.TypeName}>, "                                  +
+            $"ISpanParsable<{model.TypeName}>, "                              +
+            $"IUtf8SpanParsable<{model.TypeName}>"; 
 
         sb.AppendLine($"{model.Accessibility} readonly {typeKeyword} {model.TypeName}{interfaces}");
         sb.AppendLine("{");
@@ -166,7 +174,9 @@ public sealed class Generator : IIncrementalGenerator
         sb.AppendExplicitAndImplicitOperators(model);
         sb.AppendSpanFormattable(model);
         sb.AppendUtf8SpanFormattable(model);
+        sb.AppendParsable(model);
         sb.AppendSpanParsable(model);
+        sb.AppendUtf8SpanParsable(model);
         sb.AppendIsDefault(model);
         sb.AppendSystemTextJsonWriteMethods(model);
         sb.AppendSystemTextJsonConverter(model);
